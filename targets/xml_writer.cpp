@@ -185,6 +185,10 @@ void til::xml_writer::do_loop_node(til::loop_node * const node, int lvl) {
   closeTag(node, lvl);
 }
 
+void til::xml_writer::do_stop_node(til::stop_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_if_node(til::if_node * const node, int lvl) {

@@ -196,6 +196,10 @@ void til::type_checker::do_loop_node(til::loop_node *const node, int lvl) {
   node->condition()->accept(this, lvl + 4);
 }
 
+void til::type_checker::do_stop_node(til::stop_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_if_node(til::if_node *const node, int lvl) {
