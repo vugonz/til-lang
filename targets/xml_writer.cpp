@@ -143,6 +143,10 @@ void til::xml_writer::do_function_node(til::function_node *const node, int lvl) 
   // TODO
 }
 
+void til::xml_writer::do_return_node(til::return_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 void til::xml_writer::do_evaluation_node(til::evaluation_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;

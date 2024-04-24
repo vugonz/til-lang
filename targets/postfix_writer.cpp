@@ -203,6 +203,10 @@ void til::postfix_writer::do_function_node(til::function_node *const node, int l
   // TODO
 }
 
+void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_evaluation_node(til::evaluation_node * const node, int lvl) {
