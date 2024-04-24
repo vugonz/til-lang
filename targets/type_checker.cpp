@@ -165,6 +165,10 @@ void til::type_checker::do_evaluation_node(til::evaluation_node *const node, int
   node->argument()->accept(this, lvl + 2);
 }
 
+void til::type_checker::do_block_node(til::block_node *const node, int lvl) {
+  // EMPTY
+}
+
 void til::type_checker::do_print_node(til::print_node *const node, int lvl) {
   node->argument()->accept(this, lvl + 2);
 }
