@@ -199,6 +199,12 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
 
 //---------------------------------------------------------------------------
 
+void til::postfix_writer::do_function_node(til::function_node *const node, int lvl) {
+  // TODO
+}
+
+//---------------------------------------------------------------------------
+
 void til::postfix_writer::do_evaluation_node(til::evaluation_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   node->argument()->accept(this, lvl); // determine the value

@@ -139,6 +139,11 @@ void til::xml_writer::do_program_node(til::program_node * const node, int lvl) {
 
 //---------------------------------------------------------------------------
 
+void til::xml_writer::do_function_node(til::function_node *const node, int lvl) {
+  // TODO
+}
+
+//---------------------------------------------------------------------------
 void til::xml_writer::do_evaluation_node(til::evaluation_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
