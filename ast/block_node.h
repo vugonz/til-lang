@@ -6,7 +6,7 @@
 
 namespace til {
 
-/*
+/**
  * Class for describing block nodes.
  */
 class block_node : public cdk::basic_node {
