@@ -25,6 +25,7 @@
 "loop"                 return tLOOP; 
 "if"                   return tIF; 
 "print"                return tPRINT; 
+"println"              return tPRINTLN; 
 "read"                 return tREAD; 
 "begin"                return tBEGIN; 
 "end"                  return tEND; 
