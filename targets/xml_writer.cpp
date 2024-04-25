@@ -152,7 +152,7 @@ void til::xml_writer::do_evaluation_node(til::evaluation_node * const node, int 
 }
 
 void til::xml_writer::do_block_node(til::block_node *const node, int lvl) {
-  // EMPTY
+  // TODO
 }
 
 void til::xml_writer::do_print_node(til::print_node * const node, int lvl) {
