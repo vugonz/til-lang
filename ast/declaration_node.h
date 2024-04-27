@@ -12,7 +12,6 @@ namespace til {
  */
 class declaration_node : public cdk::typed_node {
     int _qualifier;
-    std::shared_ptr<cdk::basic_type> _var_type;
     std::string _identifier;
     cdk::expression_node *_initializer;
 
@@ -20,9 +19,9 @@ class declaration_node : public cdk::typed_node {
     declaration_node(int lineno, int qualifier,
                      std::shared_ptr<cdk::basic_type> var_type,
                      const std::string &identifier,
-                     cdk::expression_node *_initializer)
-        : cdk::typed_node(lineno), _qualifier(qualifier), _var_type(var_type),
-          _identifier(identifier) {
+                     cdk::expression_node *initializer)
+        : cdk::typed_node(lineno), _qualifier(qualifier),
+          _identifier(identifier), _initializer(initializer) {
         type(var_type);
     }
 
