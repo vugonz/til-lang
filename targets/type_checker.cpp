@@ -62,6 +62,11 @@ void til::type_checker::do_unary_plus_node(cdk::unary_plus_node *const node, int
   processUnaryExpression(node, lvl);
 }
 
+void til::type_checker::do_identity_node(til::identity_node *const node, int lvl) {
+  // TODO
+}
+
+
 //---------------------------------------------------------------------------
 
 void til::type_checker::processBinaryExpression(cdk::binary_operation_node *const node, int lvl) {

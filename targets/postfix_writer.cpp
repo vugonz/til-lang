@@ -66,6 +66,10 @@ void til::postfix_writer::do_unary_plus_node(cdk::unary_plus_node * const node, 
   node->argument()->accept(this, lvl); // determine the value
 }
 
+void til::postfix_writer::do_identity_node(til::identity_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_add_node(cdk::add_node * const node, int lvl) {
