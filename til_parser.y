@@ -34,7 +34,7 @@
 
 %token <i> tINTEGER
 %token <s> tIDENTIFIER tSTRING
-%token tLOOP tIF tPRINT tPRINTLN tREAD tBEGIN tEND
+%token tLOOP tIF tPRINT tPRINTLN tREAD tPROGRAM
 
 %nonassoc tIFX
 %nonassoc tELSE
@@ -55,7 +55,7 @@
 %}
 %%
 
-program : tBEGIN list tEND { compiler->ast(new til::program_node(LINE, $2)); }
+program : tPROGRAM '(' list ')' { compiler->ast(new til::program_node(LINE, $3)); }
         ;
 
 list : stmt      { $$ = new cdk::sequence_node(LINE, $1); }

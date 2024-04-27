@@ -60,10 +60,6 @@ void til::xml_writer::do_unary_plus_node(cdk::unary_plus_node * const node, int 
   do_unary_operation(node, lvl);
 }
 
-void til::xml_writer::do_identity_node(til::identity_node *const node, int lvl) {
-  // TODO
-}
-
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_binary_operation(cdk::binary_operation_node * const node, int lvl) {
