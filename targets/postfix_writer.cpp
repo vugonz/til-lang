@@ -273,7 +273,7 @@ void til::postfix_writer::do_address_of_node(til::address_of_node *const node, i
   // TODO
 }
 
-void til::type_checker::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {
+void til::postfix_writer::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {
   // TODO
 }
 
@@ -329,6 +329,11 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
 
 //---------------------------------------------------------------------------
 
+void til::postfix_writer::do_function_call_node(til::function_call_node *const node, int lvl) {
+  // TODO
+}
+
+//---------------------------------------------------------------------------
 void til::postfix_writer::do_declaration_node(til::declaration_node *const node, int lvl) {
   // TODO 
 }

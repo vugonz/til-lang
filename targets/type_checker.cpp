@@ -243,6 +243,12 @@ void til::type_checker::do_if_else_node(til::if_else_node *const node, int lvl) 
 
 //---------------------------------------------------------------------------
 
+void til::type_checker::do_function_call_node(til::function_call_node *const node, int lvl) {
+  // TODO
+}
+
+//---------------------------------------------------------------------------
+
 void til::type_checker::do_declaration_node(til::declaration_node *const node, int lvl) {
   // TODO 
 }
