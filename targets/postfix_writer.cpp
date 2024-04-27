@@ -66,6 +66,10 @@ void til::postfix_writer::do_unary_plus_node(cdk::unary_plus_node * const node, 
   node->argument()->accept(this, lvl); // determine the value
 }
 
+void til::postfix_writer::do_identity_node(til::identity_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_add_node(cdk::add_node * const node, int lvl) {
@@ -167,6 +171,10 @@ void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, 
   _pf.STINT(); // store the value at address
 }
 
+void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_program_node(til::program_node * const node, int lvl) {
@@ -261,6 +269,20 @@ void til::postfix_writer::do_read_node(til::read_node * const node, int lvl) {
 
 //---------------------------------------------------------------------------
 
+void til::postfix_writer::do_address_of_node(til::address_of_node *const node, int lvl) {
+  // TODO
+}
+
+void til::postfix_writer::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {
+  // TODO
+}
+
+void til::postfix_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {
+  // TODO
+}
+
+//---------------------------------------------------------------------------
+
 void til::postfix_writer::do_loop_node(til::loop_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   int lbl1, lbl2;
@@ -307,6 +329,17 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
 
 //---------------------------------------------------------------------------
 
+void til::postfix_writer::do_function_call_node(til::function_call_node *const node, int lvl) {
+  // TODO
+}
+
+//---------------------------------------------------------------------------
 void til::postfix_writer::do_declaration_node(til::declaration_node *const node, int lvl) {
   // TODO 
+}
+
+//---------------------------------------------------------------------------
+
+void til::postfix_writer::do_sizeof_node(til::sizeof_node *const node, int lvl) {
+  // TODO
 }

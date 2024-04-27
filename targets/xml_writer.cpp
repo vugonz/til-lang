@@ -60,6 +60,10 @@ void til::xml_writer::do_unary_plus_node(cdk::unary_plus_node * const node, int 
   do_unary_operation(node, lvl);
 }
 
+void til::xml_writer::do_identity_node(til::identity_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_binary_operation(cdk::binary_operation_node * const node, int lvl) {
@@ -129,6 +133,10 @@ void til::xml_writer::do_assignment_node(cdk::assignment_node * const node, int 
   closeTag(node, lvl);
 }
 
+void til::xml_writer::do_index_node(til::index_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_program_node(til::program_node * const node, int lvl) {
@@ -173,6 +181,20 @@ void til::xml_writer::do_read_node(til::read_node * const node, int lvl) {
   openTag(node, lvl);
   node->argument()->accept(this, lvl + 2);
   closeTag(node, lvl);
+}
+
+//---------------------------------------------------------------------------
+
+void til::xml_writer::do_address_of_node(til::address_of_node *const node, int lvl) {
+  // TODO
+}
+
+void til::xml_writer::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {
+  // TODO
+}
+
+void til::xml_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {
+  // TODO
 }
 
 //---------------------------------------------------------------------------
@@ -228,6 +250,18 @@ void til::xml_writer::do_if_else_node(til::if_else_node * const node, int lvl) {
 
 //---------------------------------------------------------------------------
 
+void til::xml_writer::do_function_call_node(til::function_call_node *const node, int lvl) {
+  // TODO
+}
+
+//---------------------------------------------------------------------------
+
 void til::xml_writer::do_declaration_node(til::declaration_node *const node, int lvl) {
   // TODO 
+}
+
+//---------------------------------------------------------------------------
+
+void til::xml_writer::do_sizeof_node(til::sizeof_node *const node, int lvl) {
+  // TODO
 }

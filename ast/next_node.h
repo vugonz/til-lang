@@ -5,6 +5,9 @@
 
 namespace til {
 
+/**
+ * Class for describing stop nodes.
+ */
 class next_node : public cdk::basic_node {
     int _iteration_no;
 

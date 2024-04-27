@@ -62,6 +62,11 @@ void til::type_checker::do_unary_plus_node(cdk::unary_plus_node *const node, int
   processUnaryExpression(node, lvl);
 }
 
+void til::type_checker::do_identity_node(til::identity_node *const node, int lvl) {
+  // TODO
+}
+
+
 //---------------------------------------------------------------------------
 
 void til::type_checker::processBinaryExpression(cdk::binary_operation_node *const node, int lvl) {
@@ -155,6 +160,10 @@ void til::type_checker::do_assignment_node(cdk::assignment_node *const node, int
   node->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
 }
 
+void til::type_checker::do_index_node(til::index_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_program_node(til::program_node *const node, int lvl) {
@@ -196,6 +205,20 @@ void til::type_checker::do_read_node(til::read_node *const node, int lvl) {
 
 //---------------------------------------------------------------------------
 
+void til::type_checker::do_address_of_node(til::address_of_node *const node, int lvl) {
+  // TODO
+}
+
+void til::type_checker::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {
+  // TODO
+}
+
+void til::type_checker::do_nullptr_node(til::nullptr_node *const node, int lvl) {
+  // TODO
+}
+
+//---------------------------------------------------------------------------
+
 void til::type_checker::do_loop_node(til::loop_node *const node, int lvl) {
   node->condition()->accept(this, lvl + 4);
 }
@@ -220,6 +243,18 @@ void til::type_checker::do_if_else_node(til::if_else_node *const node, int lvl) 
 
 //---------------------------------------------------------------------------
 
+void til::type_checker::do_function_call_node(til::function_call_node *const node, int lvl) {
+  // TODO
+}
+
+//---------------------------------------------------------------------------
+
 void til::type_checker::do_declaration_node(til::declaration_node *const node, int lvl) {
   // TODO 
+}
+
+//---------------------------------------------------------------------------
+
+void til::type_checker::do_sizeof_node(til::sizeof_node *const node, int lvl) {
+  // TODO
 }
