@@ -4,6 +4,10 @@
 #include <cdk/ast/expression_node.h>
 
 namespace til {
+
+/**
+ * Class for describing the sizeof operator.
+ */
 class sizeof_node : public cdk::expression_node {
     cdk::expression_node *_argument;
 
