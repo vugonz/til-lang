@@ -17,7 +17,6 @@ namespace til {
 class function_node : public cdk::expression_node {
     cdk::sequence_node *_arguments;
     til::block_node *_block;
-    bool _main = false;
 
   public:
     function_node(int lineno, std::shared_ptr<cdk::basic_type> func_type,
@@ -30,17 +29,6 @@ class function_node : public cdk::expression_node {
         }
 
         type(cdk::functional_type::create(arg_types, func_type));
-    }
-
-    /**
-     * Main function node constructor
-     */
-    function_node(int lineno, til::block_node *block)
-        : cdk::expression_node(lineno),
-          _arguments(new cdk::sequence_node(lineno)), _block(block),
-          _main(true) {
-        type(cdk::functional_type::create(
-            cdk::primitive_type::create(4, cdk::TYPE_INT)));
     }
 
   public:
