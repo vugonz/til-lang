@@ -269,6 +269,10 @@ void til::postfix_writer::do_address_of_node(til::address_of_node *const node, i
   // TODO
 }
 
+void til::postfix_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_loop_node(til::loop_node * const node, int lvl) {
