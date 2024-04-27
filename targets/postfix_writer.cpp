@@ -167,6 +167,10 @@ void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, 
   _pf.STINT(); // store the value at address
 }
 
+void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_program_node(til::program_node * const node, int lvl) {
@@ -315,4 +319,10 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
 
 void til::postfix_writer::do_declaration_node(til::declaration_node *const node, int lvl) {
   // TODO 
+}
+
+//---------------------------------------------------------------------------
+
+void til::postfix_writer::do_sizeof_node(til::sizeof_node *const node, int lvl) {
+  // TODO
 }

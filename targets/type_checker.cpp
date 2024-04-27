@@ -155,6 +155,10 @@ void til::type_checker::do_assignment_node(cdk::assignment_node *const node, int
   node->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
 }
 
+void til::type_checker::do_index_node(til::index_node *const node, int lvl) {
+  // TODO
+}
+
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_program_node(til::program_node *const node, int lvl) {
@@ -228,4 +232,10 @@ void til::type_checker::do_if_else_node(til::if_else_node *const node, int lvl) 
 
 void til::type_checker::do_declaration_node(til::declaration_node *const node, int lvl) {
   // TODO 
+}
+
+//---------------------------------------------------------------------------
+
+void til::type_checker::do_sizeof_node(til::sizeof_node *const node, int lvl) {
+  // TODO
 }
