@@ -8,7 +8,7 @@
 namespace til {
 
 /**
- * Class for describing declaration nodes.
+ * Class for describing variable declaration nodes.
  */
 class declaration_node : public cdk::typed_node {
     int _qualifier;
