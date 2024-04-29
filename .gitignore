@@ -2,6 +2,8 @@
 .auto/
 
 til_scripts/
+scanner-tests/
+auto-tests/
 
 *.tab.c
 *.tab.h
