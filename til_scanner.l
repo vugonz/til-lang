@@ -33,8 +33,8 @@ EXP [eE][+-]?[0-9]+
 
 ";".*$            ; 
 "/*"              yy_push_state(X_COMMENT);
-<X_COMMENT>"*/"   yy_push_state(X_COMMENT); // nested comment
-<X_COMMENT>"/*"   yy_pop_state();
+<X_COMMENT>"/*"   yy_push_state(X_COMMENT); // nested comment
+<X_COMMENT>"*/"   yy_pop_state();
 <X_COMMENT>.|"\n" ;
 
   /* ====================================================================== */
@@ -67,11 +67,11 @@ EXP [eE][+-]?[0-9]+
 "println"              return tPRINTLN; 
 
 "set"                  return tSET;
-"null"                 return tNULL
+"null"                 return tNULL;
 
 "sizeof"               return tSIZEOF;
 "objects"              return tOBJECTS;
-"index"                return tINDEX
+"index"                return tINDEX;
 
   /* ====================================================================== */
   /* ====[                        3.4 - types                         ]==== */
@@ -153,14 +153,9 @@ EXP [eE][+-]?[0-9]+
 <X_NULL>\0             yyerror("null byte in string");
 <X_NULL>.|\\\"|\\\\    ;
 
-  /* ====================================================================== */
-  /* ====[                     3.8.4 - pointers                       ]==== */
-  /* ====================================================================== */
-
-
 [0-9]+                 yylval.i = strtol(yytext, nullptr, 10); return tINTEGER;
 
-[-()<>=+*/%;{}.]       return *yytext;
+[-<>=+*/%;{}.@?~()!]    return *yytext;
 
 .                      yyerror("Unknown character");
 
