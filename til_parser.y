@@ -36,36 +36,41 @@
   std::vector<std::shared_ptr<cdk::basic_type>> *type_vec;
 };
 
-%token tGE tLE tEQ tNE tAND tOR
-%token tEXTERNAL tFORWARD tPUBLIC tVAR tPRIVATE
-%token tPROGRAM tFUNCTION tIF tBLOCK tLOOP tNEXT tSTOP tRETURN 
-%token tREAD tPRINT tPRINTLN
-%token tSET tNULL 
-%token tSIZEOF tOBJECTS tINDEX
-
-%token tTYPE_INT tTYPE_DOUBLE tTYPE_STRING tTYPE_VOID
-
 %token <i> tINTEGER
 %token <d> tDOUBLE
 %token <s> tIDENTIFIER tSTRING
+%token tTYPE_INT tTYPE_DOUBLE tTYPE_STRING tTYPE_VOID
+%token tEXTERNAL tFORWARD tPUBLIC tVAR tPRIVATE
+%token tLOOP tSTOP tNEXT tRETURN
+%token tIF
+%token tREAD tNULL tSIZEOF tINDEX tOBJECTS
+%token tPROGRAM
+%token tBLOCK
+%token tPRINT tPRINTLN
+%token tFUNCTION
 
 %nonassoc tIFX
 
 %right tSET
-%left tOR tAND tEQ tNE tGE tLE '>' '<'
+%left tOR 
+%left tAND 
+%nonassoc '~'
+%left tEQ tNE 
+%left tGE tLE '>' '<'
 %left '+' '-'
 %left '*' '/' '%'
 %nonassoc tUNARY
+%nonassoc tINDEX
 
-%type <node> gdecl instr decl
-%type <block> block
 %type <sequence> file gdecls exprs decls instrs
+%type <node> gdecl instr decl
+%type <type> type data_type func_type ref_type
+%type <type_vec> types
+%type <block> block
 %type <expression> expr integer double function
 %type <lvalue> lval
-%type <type_vec> types
-%type <program> program
-%type <type> type data_type func_type ref_type
 %type<s> string
+%type <program> program
 
 %{
 //-- The rules below will be included in yyparse, the main parsing function.
@@ -73,7 +78,7 @@
 
 %%
 
-file : gdecls program { compiler->ast(new cdk::sequence_node(LINE, $2, $1));}
+file : gdecls program { compiler->ast(new cdk::sequence_node(LINE, $2, $1)); }
      | gdecls         { compiler->ast($1); }
      |        program { compiler->ast(new cdk::sequence_node(LINE, $1)); }
      | /* empty */    { compiler->ast(new cdk::sequence_node(LINE)); }
@@ -88,7 +93,6 @@ gdecl : '(' tEXTERNAL     func_type tIDENTIFIER ')'      { $$ = new til::declara
       | '(' tPUBLIC       type      tIDENTIFIER ')'      { $$ = new til::declaration_node(LINE, tPUBLIC,   $3,      *$4, nullptr); }
       | '(' tPUBLIC       type      tIDENTIFIER expr ')' { $$ = new til::declaration_node(LINE, tPUBLIC,   $3,      *$4, $5); }
       | '(' tPUBLIC tVAR            tIDENTIFIER expr ')' { $$ = new til::declaration_node(LINE, tPUBLIC,   nullptr, *$4, $5); }
-      | '('         tVAR            tIDENTIFIER expr ')' { $$ = new til::declaration_node(LINE, tPUBLIC,   nullptr, *$3, $4); }
       | '(' tPUBLIC                 tIDENTIFIER expr ')' { $$ = new til::declaration_node(LINE, tPUBLIC,   nullptr, *$3, $4); }
       |  decl                                            { $$ = $1; } // private by default
       ;
@@ -102,10 +106,10 @@ decl : '(' type tIDENTIFIER ')'      { $$ = new til::declaration_node(LINE, tPRI
      | '(' tVAR tIDENTIFIER expr ')' { $$ = new til::declaration_node(LINE, tPRIVATE, nullptr, *$3, $4); }
      ;
 
-program : '(' tPROGRAM block ')' { new til::program_node(LINE, $3); }
+program : '(' tPROGRAM block ')' { $$ = new til::program_node(LINE, $3); }
         ;
 
-function : '(' tFUNCTION '(' type ')' block ')'       { $$ = new til::function_node(LINE, $4, nullptr, $6); }
+function : '(' tFUNCTION '(' type ')' block ')'       { $$ = new til::function_node(LINE, $4, new cdk::sequence_node(LINE), $6); }
          | '(' tFUNCTION '(' type decls ')' block ')' { $$ = new til::function_node(LINE, $4, $5, $7); }
          ;
 
@@ -132,17 +136,16 @@ types : type       { $$ = new std::vector<std::shared_ptr<cdk::basic_type>>(); $
       ;
 
 block : decls instrs  { $$ = new til::block_node(LINE, $1, $2); }
-      |        instrs  { $$ = new til::block_node(LINE, new cdk::sequence_node(LINE), $1); }
-      |  decls         { $$ = new til::block_node(LINE, $1, new cdk::sequence_node(LINE)); }
-      | /* empty */    { $$ = new til::block_node(LINE, new cdk::sequence_node(LINE), new cdk::sequence_node(LINE)); }
+      |       instrs  { $$ = new til::block_node(LINE, new cdk::sequence_node(LINE), $1); }
+      | decls         { $$ = new til::block_node(LINE, $1, new cdk::sequence_node(LINE)); }
+      | /* empty */   { $$ = new til::block_node(LINE, new cdk::sequence_node(LINE), new cdk::sequence_node(LINE)); }
       ;
-
 
 instrs : instr         { $$ = new cdk::sequence_node(LINE, $1); }
        | instrs instr  { $$ = new cdk::sequence_node(LINE, $2, $1); }
        ;
 
-instr : '(' expr ')'                       { $$ = new til::evaluation_node(LINE, $2); }
+instr :  expr                              { $$ = new til::evaluation_node(LINE, $1); }
       | '(' tPRINT exprs ')'               { $$ = new til::print_node(LINE, $3, false); }
       | '(' tPRINTLN exprs ')'             { $$ = new til::print_node(LINE, $3, true); }
       | '(' tSTOP tINTEGER ')'             { $$ = new til::stop_node(LINE, $3); }
@@ -157,39 +160,39 @@ instr : '(' expr ')'                       { $$ = new til::evaluation_node(LINE,
       | '(' tBLOCK block ')'               { $$ = $3; }
       ;
 
-expr : integer               { $$ = $1; }
-     | double                { $$ = $1; }
-     | string                { $$ = new cdk::string_node(LINE, *$1); delete $1; }
-     | tNULL                 { $$ = new til::nullptr_node(LINE); }
-     | '-' expr %prec tUNARY { $$ = new cdk::unary_minus_node(LINE, $2); }
-     | '+' expr %prec tUNARY { $$ = new cdk::unary_plus_node(LINE, $2); }
-     | '~' expr              { $$ = new cdk::not_node(LINE, $2); }
-     | '+' expr expr         { $$ = new cdk::add_node(LINE, $2, $3); }
-     | '-' expr expr         { $$ = new cdk::sub_node(LINE, $2, $3); }
-     | '*' expr expr         { $$ = new cdk::mul_node(LINE, $2, $3); }
-     | '/' expr expr         { $$ = new cdk::div_node(LINE, $2, $3); }
-     | '%' expr expr         { $$ = new cdk::mod_node(LINE, $2, $3); }
-     | '<' expr expr         { $$ = new cdk::lt_node(LINE, $2, $3); }
-     | '>' expr expr         { $$ = new cdk::gt_node(LINE, $2, $3); }
-     | '?' lval              { $$ = new til::address_of_node(LINE, $2); }
-     | tGE  expr expr        { $$ = new cdk::ge_node(LINE, $2, $3); }
-     | tLE  expr expr        { $$ = new cdk::le_node(LINE, $2, $3); }
-     | tNE  expr expr        { $$ = new cdk::ne_node(LINE, $2, $3); }
-     | tEQ  expr expr        { $$ = new cdk::eq_node(LINE, $2, $3); }
-     | tAND expr expr        { $$ = new cdk::and_node(LINE, $2, $3); }
-     | tOR  expr expr        { $$ = new cdk::or_node(LINE, $2, $3); }
-     | lval                  { $$ = new cdk::rvalue_node(LINE, $1); }
-     | tSET lval expr        { $$ = new cdk::assignment_node(LINE, $2, $3); }
-     | tOBJECTS expr         { $$ = new til::stack_alloc_node(LINE, $2); } 
-     | tSIZEOF expr          { $$ = new til::sizeof_node(LINE, $2); }
-     | expr exprs            { $$ = new til::function_call_node(LINE, $1, $2); }
-     | '@' '(' exprs ')'     { $$ = new til::function_call_node(LINE, nullptr, $3); }
-     | '@' '(' ')'           { $$ = new til::function_call_node(LINE, nullptr, new cdk::sequence_node(LINE)); }
-     | function              { $$ = $1; }
-     | '(' expr ')'          { $$ = $2; }
+expr : '(' '-' expr %prec tUNARY ')' { $$ = new cdk::unary_minus_node(LINE, $3); }
+     | '(' '+' expr %prec tUNARY ')' { $$ = new cdk::unary_plus_node(LINE, $3); }
+     | '(' '~' expr ')'              { $$ = new cdk::not_node(LINE, $3); }
+     | '(' '+' expr expr ')'         { $$ = new cdk::add_node(LINE, $3, $4); }
+     | '(' '-' expr expr ')'         { $$ = new cdk::sub_node(LINE, $3, $4); }
+     | '(' '*' expr expr ')'         { $$ = new cdk::mul_node(LINE, $3, $4); }
+     | '(' '/' expr expr ')'         { $$ = new cdk::div_node(LINE, $3, $4); }
+     | '(' '%' expr expr ')'         { $$ = new cdk::mod_node(LINE, $3, $4); }
+     | '(' '<' expr expr ')'         { $$ = new cdk::lt_node(LINE, $3, $4); }
+     | '(' '>' expr expr ')'         { $$ = new cdk::gt_node(LINE, $3, $4); }
+     | '(' '?' lval ')'              { $$ = new til::address_of_node(LINE, $3); }
+     | '(' tGE  expr expr ')'        { $$ = new cdk::ge_node(LINE, $3, $4); }
+     | '(' tLE  expr expr ')'        { $$ = new cdk::le_node(LINE, $3, $4); }
+     | '(' tNE  expr expr ')'        { $$ = new cdk::ne_node(LINE, $3, $4); }
+     | '(' tEQ  expr expr ')'        { $$ = new cdk::eq_node(LINE, $3, $4); }
+     | '(' tAND expr expr ')'        { $$ = new cdk::and_node(LINE, $3, $4); }
+     | '(' tOR  expr expr ')'        { $$ = new cdk::or_node(LINE, $3, $4); }
+     | '(' tSET lval expr ')'        { $$ = new cdk::assignment_node(LINE, $3, $4); }
+     | '(' tOBJECTS expr ')'         { $$ = new til::stack_alloc_node(LINE, $3); } 
+     | '(' tSIZEOF expr ')'          { $$ = new til::sizeof_node(LINE, $3); }
+     | '(' expr exprs ')'            { $$ = new til::function_call_node(LINE, $2, $3); }
+     | '(' expr ')'                  { $$ = new til::function_call_node(LINE, $2, new cdk::sequence_node(LINE)); }
+     | '(' '@' exprs ')'             { $$ = new til::function_call_node(LINE, nullptr, $3); }
+     | '(' '@' ')'                   { $$ = new til::function_call_node(LINE, nullptr, new cdk::sequence_node(LINE)); }
+     | integer                       { $$ = $1; }
+     | double                        { $$ = $1; }
+     | string                        { $$ = new cdk::string_node(LINE, $1); }
+     | tNULL                         { $$ = new til::nullptr_node(LINE); }
+     | function                      { $$ = $1; }
+     | lval                          { $$ = new cdk::rvalue_node(LINE, $1); }
      ;
 
-exprs : exprs expr { $$ = new cdk::sequence_node(LINE, $2, $1); }
+exprs : expr exprs { $$ = new cdk::sequence_node(LINE, $1, $2); }
       | expr       { $$ = new cdk::sequence_node(LINE, $1); }
       ;
 
@@ -198,9 +201,10 @@ lval : tIDENTIFIER              { $$ = new cdk::variable_node(LINE, $1); }
      ;
 
 integer  : tINTEGER       { $$ = new cdk::integer_node(LINE, $1); }
+
 double   : tDOUBLE        { $$ = new cdk::double_node(LINE, $1); }
-string   : string tSTRING { $$ = $1; $$->append(*$2); delete $2; }
-         | tSTRING        { $$ = $1; }
+
+string   : tSTRING        { $$ = new std::string(*$1); delete $1; }
          ;
  
 %%
