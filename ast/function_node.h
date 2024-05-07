@@ -23,7 +23,7 @@ class function_node : public cdk::expression_node {
                   cdk::sequence_node *arguments, til::block_node *block)
         : cdk::expression_node(lineno), _arguments(arguments), _block(block) {
         std::vector<std::shared_ptr<cdk::basic_type>> arg_types;
-        for (size_t i; i < arguments->size(); i++) {
+        for (size_t i = 0; i < arguments->size(); i++) {
             arg_types.push_back(
                 dynamic_cast<cdk::typed_node *>(arguments->node(i))->type());
         }
