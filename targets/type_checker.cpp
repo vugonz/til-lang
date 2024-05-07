@@ -14,22 +14,19 @@ void til::type_checker::do_sequence_node(cdk::sequence_node *const node, int lvl
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_nil_node(cdk::nil_node *const node, int lvl) {
-  // EMPTY
 }
 void til::type_checker::do_data_node(cdk::data_node *const node, int lvl) {
-  // EMPTY
 }
 void til::type_checker::do_double_node(cdk::double_node *const node, int lvl) {
-  // EMPTY
 }
 void til::type_checker::do_not_node(cdk::not_node *const node, int lvl) {
-  // EMPTY
+  processUnaryExpression(node, lvl);
 }
 void til::type_checker::do_and_node(cdk::and_node *const node, int lvl) {
-  // EMPTY
+  processBinaryExpression(node, lvl);
 }
 void til::type_checker::do_or_node(cdk::or_node *const node, int lvl) {
-  // EMPTY
+  processBinaryExpression(node, lvl);
 }
 
 //---------------------------------------------------------------------------
@@ -47,6 +44,7 @@ void til::type_checker::do_string_node(cdk::string_node *const node, int lvl) {
 //---------------------------------------------------------------------------
 
 void til::type_checker::processUnaryExpression(cdk::unary_operation_node *const node, int lvl) {
+  ASSERT_UNSPEC;
   node->argument()->accept(this, lvl + 2);
   if (!node->argument()->is_typed(cdk::TYPE_INT)) throw std::string("wrong type in argument of unary expression");
 
