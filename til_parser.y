@@ -60,7 +60,6 @@
 %left '+' '-'
 %left '*' '/' '%'
 %nonassoc tUNARY
-%nonassoc tINDEX
 
 %type <sequence> file gdecls exprs decls instrs
 %type <node> gdecl instr decl
