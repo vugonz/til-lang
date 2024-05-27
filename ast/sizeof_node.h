@@ -10,8 +10,6 @@ namespace til {
  * Class for describing the sizeof operator.
  */
 class sizeof_node : public cdk::unary_operation_node {
-    cdk::expression_node *_argument;
-
   public:
     sizeof_node(int lineno, cdk::expression_node *argument)
         : cdk::unary_operation_node(lineno, argument) {}
