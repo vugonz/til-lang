@@ -135,6 +135,26 @@ void til::type_checker::do_rvalue_node(cdk::rvalue_node *const node, int lvl) {
 void til::type_checker::do_assignment_node(cdk::assignment_node *const node, int lvl) {
   ASSERT_UNSPEC;
 
+<<<<<<< Updated upstream
+=======
+  node->lvalue()->accept(this, lvl + 2);
+  node->rvalue()->accept(this, lvl + 2);
+  // (var x (read))
+  if (node->lvalue()->is_typed(cdk::TYPE_UNSPEC) && node->rvalue()->is_typed(cdk::TYPE_UNSPEC)) {
+      node->lvalue()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+      node->rvalue()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+      return;
+  } 
+
+  if (node->lvalue()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->lvalue()->type(node->rvalue()->type());
+  } else if (node->rvalue()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->rvalue()->type(node->lvalue()->type());
+  } 
+
+  node->type(node->lvalue()->type());
+  /*
+>>>>>>> Stashed changes
   try {
     node->lvalue()->accept(this, lvl);
   } catch (const std::string &id) {
@@ -176,6 +196,21 @@ void til::type_checker::do_return_node(til::return_node *const node, int lvl) {
 //---------------------------------------------------------------------------
 void til::type_checker::do_evaluation_node(til::evaluation_node *const node, int lvl) {
   node->argument()->accept(this, lvl + 2);
+<<<<<<< Updated upstream
+=======
+
+  // if unspec, assume it's a read node, type infer it to int
+  if (node->argument()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->argument()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  } else if (node->argument()->is_typed(cdk::TYPE_POINTER)) {
+    auto ref = cdk::reference_type::cast(node->argument()->type());
+
+    // default to int pointer if unspec pointer
+    if (ref != nullptr && ref->referenced()->name() == cdk::TYPE_UNSPEC) {
+      node->argument()->type(cdk::reference_type::create(4, cdk::primitive_type::create(4, cdk::TYPE_INT)));
+    }
+  }
+>>>>>>> Stashed changes
 }
 
 void til::type_checker::do_block_node(til::block_node *const node, int lvl) {

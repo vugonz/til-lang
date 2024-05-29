@@ -183,6 +183,7 @@ expr : '(' '-' expr %prec tUNARY ')' { $$ = new cdk::unary_minus_node(LINE, $3);
      | '(' expr ')'                  { $$ = new til::function_call_node(LINE, $2, new cdk::sequence_node(LINE)); }
      | '(' '@' exprs ')'             { $$ = new til::function_call_node(LINE, nullptr, $3); }
      | '(' '@' ')'                   { $$ = new til::function_call_node(LINE, nullptr, new cdk::sequence_node(LINE)); }
+     | '(' tREAD ')'                 { $$ = new til::read_node(LINE); }
      | integer                       { $$ = $1; }
      | double                        { $$ = $1; }
      | string                        { $$ = new cdk::string_node(LINE, $1); }
