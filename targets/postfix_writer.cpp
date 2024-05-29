@@ -2,6 +2,7 @@
 #include <sstream>
 #include "targets/type_checker.h"
 #include "targets/postfix_writer.h"
+#include "targets/frame_size_calculator.h"
 #include ".auto/all_nodes.h"  // all_nodes.h is automatically generated
 
 //---------------------------------------------------------------------------
@@ -12,9 +13,7 @@ void til::postfix_writer::do_nil_node(cdk::nil_node * const node, int lvl) {
 void til::postfix_writer::do_data_node(cdk::data_node * const node, int lvl) {
   // EMPTY
 }
-void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl) {
-  // EMPTY
-}
+
 void til::postfix_writer::do_not_node(cdk::not_node * const node, int lvl) {
   // EMPTY
 }
@@ -36,21 +35,38 @@ void til::postfix_writer::do_sequence_node(cdk::sequence_node * const node, int 
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_integer_node(cdk::integer_node * const node, int lvl) {
-  _pf.INT(node->value()); // push an integer
+  if (in_function()) {
+    _pf.INT(node->value()); // push an integer
+  } else {
+    _pf.SINT(node->value());
+  }
+}
+
+void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl) {
+  if (in_function()) {
+    _pf.DOUBLE(node->value());
+  } else {
+    _pf.SDOUBLE(node->value());
+  }
 }
 
 void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl) {
-  int lbl1;
+  int lbl = _lbl++;
 
   /* generate the string */
   _pf.RODATA(); // strings are DATA readonly
   _pf.ALIGN(); // make sure we are aligned
-  _pf.LABEL(mklbl(lbl1 = ++_lbl)); // give the string a name
+  _pf.LABEL(mklbl(lbl)); // give the string a name
   _pf.SSTRING(node->value()); // output string characters
 
-  /* leave the address on the stack */
-  _pf.TEXT(); // return to the TEXT segment
-  _pf.ADDR(mklbl(lbl1)); // the string to be printed
+  if (!in_function()) {
+    _pf.DATA();
+    _pf.SADDR(mklbl(lbl));
+  } else {
+    /* put the address in the stack */
+    _pf.TEXT(_functionLabels.top());
+    _pf.ADDR(mklbl(lbl));
+  }
 }
 
 //---------------------------------------------------------------------------
@@ -146,7 +162,12 @@ void til::postfix_writer::do_variable_node(cdk::variable_node * const node, int 
 void til::postfix_writer::do_rvalue_node(cdk::rvalue_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   node->lvalue()->accept(this, lvl);
-  _pf.LDINT(); // depends on type size
+
+  if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.LDDOUBLE();
+  } else {
+    _pf.LDINT(); // ints, strings and pointers
+  }
 }
 
 void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, int lvl) {
@@ -174,23 +195,30 @@ void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_program_node(til::program_node * const node, int lvl) {
-  // Note that Simple doesn't have functions. Thus, it doesn't need
-  // a function node. However, it must start in the main function.
-  // The ProgramNode (representing the whole program) doubles as a
-  // main function node.
-
   // generate the main function (RTS mandates that its name be "_main")
   _pf.TEXT();
   _pf.ALIGN();
   _pf.GLOBAL("_main", _pf.FUNC());
   _pf.LABEL("_main");
-  _pf.ENTER(0);  // Simple doesn't implement local variables
 
-  node->block()->accept(this, lvl);
+  _functionLabels.push("_main");
+
+  frame_size_calculator fsc(_compiler, _symtab);
+  node->accept(&fsc, lvl);
+  std::cout << fsc.localsize() << std::endl;
+  _pf.ENTER(fsc.localsize());
+
+  auto retLabel = mklbl(_lbl++);
+
+  _offset = 0;
+  node->block()->accept(this, lvl + 2);
 
   // end the main function
   _pf.INT(0);
   _pf.STFVAL32();
+
+  _pf.ALIGN();
+  _pf.LABEL(retLabel);
   _pf.LEAVE();
   _pf.RET();
 
@@ -216,30 +244,29 @@ void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) 
 void til::postfix_writer::do_evaluation_node(til::evaluation_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   node->argument()->accept(this, lvl); // determine the value
-  if (node->argument()->is_typed(cdk::TYPE_INT)) {
-    _pf.TRASH(4); // delete the evaluated value
-  } else if (node->argument()->is_typed(cdk::TYPE_STRING)) {
-    _pf.TRASH(4); // delete the evaluated value's address
-  } else {
-    std::cerr << "ERROR: CANNOT HAPPEN!" << std::endl;
-    exit(1);
-  }
+  _pf.TRASH(node->argument()->type()->size());
 }
 
 void til::postfix_writer::do_block_node(til::block_node *const node, int lvl) {
-  // TODO
+  _symtab.push();
+  node->declarations()->accept(this, lvl);
+  node->instructions()->accept(this, lvl);
+  _symtab.pop();
 }
 
 void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  for (size_t idx = 0; idx < node->argument()->size(); idx++) {
-    auto child = dynamic_cast<cdk::expression_node *> (node->argument()->node(idx));
+  for (const auto &node : node->arguments()->nodes()) {
+    auto expr_node = dynamic_cast<cdk::expression_node *> (node);
 
-    child->accept(this, lvl); // determine the value to print
-    if (child->is_typed(cdk::TYPE_INT)) {
+    expr_node->accept(this, lvl); // determine the value to print
+    if (expr_node->is_typed(cdk::TYPE_INT)) {
       _pf.CALL("printi");
       _pf.TRASH(4); // delete the printed value
-    } else if (child->is_typed(cdk::TYPE_STRING)) {
+    } else if (expr_node->is_typed(cdk::TYPE_STRING)) {
+      _pf.CALL("prints");
+      _pf.TRASH(4); // delete the printed value's address
+    } else if (expr_node->is_typed(cdk::TYPE_DOUBLE)) {
       _pf.CALL("prints");
       _pf.TRASH(4); // delete the printed value's address
     } else {
@@ -257,9 +284,16 @@ void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
 
 void til::postfix_writer::do_read_node(til::read_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  _pf.CALL("readi");
-  _pf.LDFVAL32();
-  _pf.STINT();
+  if (node->is_typed(cdk::TYPE_INT)) {
+    _pf.CALL("readi");
+    _pf.LDFVAL32();
+  } else if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.CALL("readd");
+    _pf.LDFVAL64();
+  } else {
+    std::cerr << "FATAL: " << node->lineno() << ": cannot read type" << std::endl;
+    return;
+  }
 }
 
 //---------------------------------------------------------------------------
@@ -336,5 +370,7 @@ void til::postfix_writer::do_declaration_node(til::declaration_node *const node,
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_sizeof_node(til::sizeof_node *const node, int lvl) {
-  // TODO
+  ASSERT_SAFE_EXPRESSIONS
+
+  _pf.INT(node->argument()->type()->size());
 }

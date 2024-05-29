@@ -18,7 +18,7 @@ class declaration_node : public cdk::typed_node {
   public:
     declaration_node(int lineno, int qualifier,
                      std::shared_ptr<cdk::basic_type> var_type,
-                     const std::string &identifier,
+                     std::string &identifier,
                      cdk::expression_node *initializer)
         : cdk::typed_node(lineno), _qualifier(qualifier),
           _identifier(identifier), _initializer(initializer) {
@@ -27,7 +27,7 @@ class declaration_node : public cdk::typed_node {
 
   public:
     inline int qualifier() { return _qualifier; }
-    inline const std::string identifier() const { return _identifier; }
+    inline const std::string &identifier() const { return _identifier; }
     inline cdk::expression_node *initializer() { return _initializer; }
 
     void accept(basic_ast_visitor *sp, int level) {

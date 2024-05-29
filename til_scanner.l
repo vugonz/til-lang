@@ -92,7 +92,7 @@ EXP [eE][+-]?[0-9]+
   /* ====================================================================== */
 
 "0x"                      yy_push_state(X_HEX_INT);
-0                         std::cerr << "ERROR: 0x0 is and invalid literal, use 0 instead." << std::endl; exit(1);
+<X_HEX_INT>0              std::cerr << "ERROR: 0x0 is and invalid literal, use 0 instead." << std::endl; exit(1);
 <X_HEX_INT>[[:xdigit:]]+  { // int hexadecimal notation
                             try {
                               yylval.i = strtoul(yytext, NULL, 16);
