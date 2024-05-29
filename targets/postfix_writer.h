@@ -4,6 +4,7 @@
 #include "targets/basic_ast_visitor.h"
 
 #include <sstream>
+#include <stack>
 #include <cdk/emitters/basic_postfix_emitter.h>
 
 namespace til {
@@ -14,6 +15,14 @@ namespace til {
   class postfix_writer: public basic_ast_visitor {
     cdk::symbol_table<til::symbol> &_symtab;
     cdk::basic_postfix_emitter &_pf;
+
+    std::stack<std::string> _functionLabels;
+
+    std::string _currentFuncLabel;
+    std::string _currentBodyRetLabel;
+
+    int _offset = 0; // current frame pointer offset
+
     int _lbl;
 
   public:
@@ -25,6 +34,10 @@ namespace til {
   public:
     ~postfix_writer() {
       os().flush();
+    }
+
+    inline bool in_function() {
+      return _functionLabels.size() > 0;
     }
 
   private:

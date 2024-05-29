@@ -218,7 +218,7 @@ void til::xml_writer::do_block_node(til::block_node *const node, int lvl) {
 void til::xml_writer::do_print_node(til::print_node * const node, int lvl) {
   //ASSERT_SAFE_EXPRESSIONS;
   openTag(node->label() + (node->newline() ? " newline='true'" : " newline='false'"), lvl);
-  node->argument()->accept(this, lvl + 2);
+  node->arguments()->accept(this, lvl + 2);
   closeTag(node, lvl);
 }
 

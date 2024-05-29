@@ -49,8 +49,6 @@
 %token tPRINT tPRINTLN
 %token tFUNCTION
 
-%nonassoc tIFX
-
 %right tSET
 %left tOR 
 %left tAND 
@@ -59,7 +57,6 @@
 %left tGE tLE '>' '<'
 %left '+' '-'
 %left '*' '/' '%'
-%nonassoc tUNARY
 
 %type <sequence> file gdecls exprs decls instrs
 %type <node> gdecl instr decl
@@ -154,13 +151,13 @@ instr :  expr                              { $$ = new til::evaluation_node(LINE,
       | '(' tRETURN expr ')'               { $$ = new til::return_node(LINE, $3); }
       | '(' tRETURN ')'                    { $$ = new til::return_node(LINE, nullptr); }
       | '(' tLOOP expr instr ')'           { $$ = new til::loop_node(LINE, $3, $4); }
-      | '(' tIF expr instr %prec tIFX ')'  { $$ = new til::if_node(LINE, $3, $4); }
+      | '(' tIF expr instr ')'             { $$ = new til::if_node(LINE, $3, $4); }
       | '(' tIF expr instr instr ')'       { $$ = new til::if_else_node(LINE, $3, $4, $5); }
       | '(' tBLOCK block ')'               { $$ = $3; }
       ;
 
-expr : '(' '-' expr %prec tUNARY ')' { $$ = new cdk::unary_minus_node(LINE, $3); }
-     | '(' '+' expr %prec tUNARY ')' { $$ = new cdk::unary_plus_node(LINE, $3); }
+expr : '(' '-' expr ')'              { $$ = new cdk::unary_minus_node(LINE, $3); }
+     | '(' '+' expr ')'              { $$ = new cdk::unary_plus_node(LINE, $3); }
      | '(' '~' expr ')'              { $$ = new cdk::not_node(LINE, $3); }
      | '(' '+' expr expr ')'         { $$ = new cdk::add_node(LINE, $3, $4); }
      | '(' '-' expr expr ')'         { $$ = new cdk::sub_node(LINE, $3, $4); }
