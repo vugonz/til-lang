@@ -179,24 +179,18 @@ void til::type_checker::do_eq_node(cdk::eq_node *const node, int lvl) {
 
 void til::type_checker::do_variable_node(cdk::variable_node *const node, int lvl) {
   ASSERT_UNSPEC;
-  const std::string &id = node->name();
-  std::shared_ptr<til::symbol> symbol = _symtab.find(id);
+  auto symbol = _symtab.find(node->name());
 
-  if (symbol != nullptr) {
-    node->type(symbol->type());
-  } else {
-    throw id;
-  }
+  if (symbol == nullptr)
+    throw std::string("undeclared variable '" + node->name() + "'");
+  
+  node->type(symbol->type());
 }
 
 void til::type_checker::do_rvalue_node(cdk::rvalue_node *const node, int lvl) {
   ASSERT_UNSPEC;
-  try {
-    node->lvalue()->accept(this, lvl);
-    node->type(node->lvalue()->type());
-  } catch (const std::string &id) {
-    throw "undeclared variable '" + id + "'";
-  }
+  node->lvalue()->accept(this, lvl);
+  node->type(node->lvalue()->type());
 }
 
 void til::type_checker::do_assignment_node(cdk::assignment_node *const node, int lvl) {
@@ -443,7 +437,7 @@ void til::type_checker::do_declaration_node(til::declaration_node *const node, i
         }
       }
 
-      if (!deep_compare_types(node->type(), node->initializer()->type())) {
+      if (!deep_compare_types(node->type(), node->initializer()->type(), true)) {
         throw std::string("'conflicting initializer expression type for variable'" + node->identifier() + "'");
       }
     }

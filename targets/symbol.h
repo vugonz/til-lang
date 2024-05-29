@@ -44,6 +44,9 @@ namespace til {
     void offset(int offset) {
       _offset = offset;
     }
+    bool is_global() const {
+      return _offset == 0;
+    }
   };
 
   inline auto make_symbol(const std::string &name, std::shared_ptr<cdk::basic_type> type, int qualifier = 0) {

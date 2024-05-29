@@ -23,6 +23,7 @@ void til::frame_size_calculator::do_if_else_node(til::if_else_node *const node,
 
 void til::frame_size_calculator::do_declaration_node(
     til::declaration_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS
   _localsize += node->type()->size();
 }
 
