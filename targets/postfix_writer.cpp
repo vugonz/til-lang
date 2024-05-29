@@ -51,7 +51,7 @@ void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl)
 }
 
 void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl) {
-  int lbl = _lbl++;
+  int lbl = ++_lbl;
 
   /* generate the string */
   _pf.RODATA(); // strings are DATA readonly
@@ -208,7 +208,7 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
   std::cout << fsc.localsize() << std::endl;
   _pf.ENTER(fsc.localsize());
 
-  auto retLabel = mklbl(_lbl++);
+  auto retLabel = mklbl(++_lbl);
 
   _offset = 0;
   node->block()->accept(this, lvl + 2);
@@ -256,8 +256,9 @@ void til::postfix_writer::do_block_node(til::block_node *const node, int lvl) {
 
 void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  for (const auto &node : node->arguments()->nodes()) {
-    auto expr_node = dynamic_cast<cdk::expression_node *> (node);
+  auto args_vec = node->arguments()->nodes();
+  for (auto it = args_vec.rbegin(); it != args_vec.rend(); ++it) {
+    auto expr_node = dynamic_cast<cdk::expression_node *> (*it);
 
     expr_node->accept(this, lvl); // determine the value to print
     if (expr_node->is_typed(cdk::TYPE_INT)) {
@@ -335,7 +336,7 @@ void til::postfix_writer::do_next_node(til::next_node *const node, int lvl) {
 
 void til::postfix_writer::do_if_node(til::if_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  int lbl1;
+  int lbl1 = ++_lbl;
   node->condition()->accept(this, lvl);
   _pf.JZ(mklbl(lbl1 = ++_lbl));
   node->block()->accept(this, lvl + 2);
@@ -353,7 +354,7 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
   _pf.JMP(mklbl(lbl2 = ++_lbl));
   _pf.LABEL(mklbl(lbl1));
   node->elseblock()->accept(this, lvl + 2);
-  _pf.LABEL(mklbl(lbl1 = lbl2));
+  _pf.LABEL(mklbl(lbl2));
 }
 
 //---------------------------------------------------------------------------
@@ -364,7 +365,63 @@ void til::postfix_writer::do_function_call_node(til::function_call_node *const n
 
 //---------------------------------------------------------------------------
 void til::postfix_writer::do_declaration_node(til::declaration_node *const node, int lvl) {
-  // TODO 
+  ASSERT_SAFE_EXPRESSIONS
+  
+  int typesize = node->type()->size();
+  int offset = 0;
+  if (in_function()) {
+    _offset -= typesize;
+    offset = _offset;
+  }
+
+  auto symbol = new_symbol();
+  if (symbol) {
+    symbol->offset(offset);
+    reset_new_symbol();
+  }
+
+  /* Private declaration */
+  if (in_function()) {
+    if (node->initializer() == nullptr)
+      return
+
+    node->initializer()->accept(this, lvl);
+    if (node->is_typed(cdk::TYPE_INT) || node->is_typed(cdk::TYPE_STRING) || node->is_typed(cdk::TYPE_POINTER)) {
+      _pf.LOCAL(symbol->offset());
+      _pf.STINT();
+    } else if (node->is_typed(cdk::TYPE_DOUBLE)) {
+      _pf.LOCAL(symbol->offset());
+      _pf.STDOUBLE();
+    } else {
+      std::cerr << node->lineno() << ": failed initializing" << std::endl;
+    }
+
+    return;
+  }
+
+  /* Global declaration */
+
+  // Unitialized declaration
+  if (node->initializer() == nullptr) {
+    _pf.BSS();
+    _pf.ALIGN();
+    std::cout << symbol->name() << std::endl;
+    _pf.LABEL(symbol->name());
+    _pf.SALLOC(typesize);
+
+    return;
+  }
+
+  _pf.DATA();
+  _pf.ALIGN();
+  _pf.LABEL(symbol->name());
+
+  if (node->is_typed(cdk::TYPE_DOUBLE) && node->initializer()->is_typed(cdk::TYPE_INT)) {
+    cdk::integer_node *int_node = dynamic_cast<cdk::integer_node *>(node->initializer());
+    _pf.SDOUBLE(int_node->value());
+  } else {
+    node->initializer()->accept(this, lvl);
+  }
 }
 
 //---------------------------------------------------------------------------

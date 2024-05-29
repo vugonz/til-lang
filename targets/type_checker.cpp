@@ -358,8 +358,6 @@ void til::type_checker::do_function_call_node(til::function_call_node *const nod
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_declaration_node(til::declaration_node *const node, int lvl) {
-  ASSERT_UNSPEC
-
   // if we have initializer expression
   if (node->initializer() != nullptr) {
     node->initializer()->accept(this, lvl + 2);
@@ -381,10 +379,9 @@ void til::type_checker::do_declaration_node(til::declaration_node *const node, i
     }
   }
 
-  const std::string &id = node->identifier();
-  auto symbol = til::make_symbol(id, node->type(), node->qualifier());
+  auto symbol = til::make_symbol(node->identifier(), node->type(), node->qualifier());
 
-  if (_symtab.insert(node->identifier(), symbol)) {
+  if (_symtab.insert(symbol->name(), symbol)) {
     _parent->set_new_symbol(symbol);
     return;
   }

@@ -12,6 +12,7 @@ namespace til {
     std::shared_ptr<cdk::basic_type> _type;
     int _qualifier;
     long _value = 0; 
+    int _offset;
 
   public:
     symbol(const std::string &name, std::shared_ptr<cdk::basic_type> type, int qualifier) :
@@ -36,6 +37,12 @@ namespace til {
     }
     long value(long v) {
       return _value = v;
+    }
+    int offset() const {
+      return _offset;
+    }
+    void offset(int offset) {
+      _offset = offset;
     }
   };
 
