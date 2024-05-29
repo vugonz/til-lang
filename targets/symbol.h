@@ -8,13 +8,15 @@
 namespace til {
 
   class symbol {
-    std::shared_ptr<cdk::basic_type> _type;
     std::string _name;
-    long _value; // hack!
+    std::shared_ptr<cdk::basic_type> _type;
+    int _qualifier;
+    long _value = 0; 
+    int _offset;
 
   public:
-    symbol(std::shared_ptr<cdk::basic_type> type, const std::string &name, long value) :
-        _type(type), _name(name), _value(value) {
+    symbol(const std::string &name, std::shared_ptr<cdk::basic_type> type, int qualifier) :
+        _name(name), _type(type), _qualifier(qualifier) {
     }
 
     virtual ~symbol() {
@@ -36,7 +38,17 @@ namespace til {
     long value(long v) {
       return _value = v;
     }
+    int offset() const {
+      return _offset;
+    }
+    void offset(int offset) {
+      _offset = offset;
+    }
   };
+
+  inline auto make_symbol(const std::string &name, std::shared_ptr<cdk::basic_type> type, int qualifier = 0) {
+    return std::make_shared<symbol>(name, type, qualifier);
+  }
 
 } // til
 

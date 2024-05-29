@@ -82,7 +82,7 @@ EXP [eE][+-]?[0-9]+
 "string"               return tTYPE_STRING;
 "void"                 return tTYPE_VOID;
 
-[A-Za-z][A-Za-z0-9_]*  yylval.s = new std::string(yytext); return tIDENTIFIER;
+[A-Za-z][A-Za-z0-9]*   yylval.s = new std::string(yytext); return tIDENTIFIER;
 
   /* ====================================================================== */
   /* ====[                       3.8 - literals                       ]==== */
@@ -90,6 +90,19 @@ EXP [eE][+-]?[0-9]+
   /* ====================================================================== */
   /* ====[                     3.8.1 - integers                       ]==== */
   /* ====================================================================== */
+
+"0x"                      yy_push_state(X_HEX_INT);
+<X_HEX_INT>0              std::cerr << "ERROR: 0x0 is and invalid literal, use 0 instead." << std::endl; exit(1);
+<X_HEX_INT>[[:xdigit:]]+  { // int hexadecimal notation
+                            try {
+                              yylval.i = strtoul(yytext, NULL, 16);
+                              yy_pop_state();
+                              return tINTEGER;
+                            } catch (std::out_of_range &) {
+                              yyerror("integer overflow");
+                            }
+                          }
+<X_HEX_INT>.|\n           std::cerr << "WARNING: line " << lineno() << ": bad hexadecimal data!" << std::endl; exit(1);
 
 0|[1-9][0-9]*   { // int decimal notation
                   try {
@@ -99,17 +112,6 @@ EXP [eE][+-]?[0-9]+
                     yyerror("integer overflow");
                   }
                 }
-
-0x[0-9a-fA-F]+  { // int hexadecimal notation
-                  try {
-                    yylval.i = std::stoi(yytext, nullptr, 16);
-                    return tINTEGER;
-                  } catch (std::out_of_range &) {
-                    yyerror("integer overflow");
-                  }
-                }
-
-0x[0-9a-zA-Z]+  yyerror("invalid hexadecimal notation");
 
   /* ====================================================================== */
   /* ====[              3.8.2 - floating point number                 ]==== */
