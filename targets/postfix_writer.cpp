@@ -383,8 +383,9 @@ void til::postfix_writer::do_declaration_node(til::declaration_node *const node,
 
   /* Private declaration */
   if (in_function()) {
-    if (node->initializer() == nullptr)
-      return
+    if (node->initializer() == nullptr) {
+      return;
+    }
 
     node->initializer()->accept(this, lvl);
     if (node->is_typed(cdk::TYPE_INT) || node->is_typed(cdk::TYPE_STRING) || node->is_typed(cdk::TYPE_POINTER)) {

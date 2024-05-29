@@ -5,6 +5,64 @@
 
 #define ASSERT_UNSPEC { if (node->type() != nullptr && !node->is_typed(cdk::TYPE_UNSPEC)) return; }
 
+/**
+ * Perform deep comparison of types. 
+ * 
+ * If relax is set to true it returns true for compatible types, which are int and double, also for functional types
+ *   with compatible arguments and/or return values.
+ * If relax is set to false it does strict comparison of types
+*/
+bool til::type_checker::deep_compare_types(std::shared_ptr<cdk::basic_type> left, std::shared_ptr<cdk::basic_type> right, bool relax) {
+  if (left->name() == cdk::TYPE_FUNCTIONAL) {
+    if (right->name() != cdk::TYPE_FUNCTIONAL)
+      return false;
+
+    auto left_type = cdk::functional_type::cast(left);
+    auto right_type = cdk::functional_type::cast(right);
+
+    // Compare functions signatures
+    if (left_type->output_length() != right_type->output_length() 
+            || left_type->input_length() != right_type->input_length())
+      return false;
+
+    // Compare functions arguments
+    for (size_t i = 0; i < left_type->input_length(); i++) {
+      if (!deep_compare_types(left_type->input(i), right_type->input(i), relax))
+        return false;
+    }
+
+    // Compare functions returns
+    for (size_t i = 0; i < left_type->input_length(); i++) {
+      if (!deep_compare_types(left_type->input(i), right_type->input(i), relax))
+        return false;
+    }
+
+    return true;
+  } else if (right->name() == cdk::TYPE_FUNCTIONAL) { // left is not of functional type so right shouldn't be
+    return false;
+  }
+
+  // Compare pointer types
+  if (left->name() == cdk::TYPE_POINTER) {
+    if (right->name() != cdk::TYPE_POINTER)
+      return false;
+
+    auto left_type = cdk::reference_type::cast(left);
+    auto right_type = cdk::reference_type::cast(right);
+
+    // Compare referenced
+    return deep_compare_types(left_type->referenced(), right_type->referenced(), relax);
+  } else if (right->name() == cdk::TYPE_POINTER) { // left is not pointer so right shouldn't be
+    return false;
+  }
+
+  // Compare remaining types
+  if (relax)
+    if (right->name() == cdk::TYPE_DOUBLE)
+      return left->name() == cdk::TYPE_INT || left->name() == cdk::TYPE_DOUBLE;
+  
+  return left->name() == right->name();
+}
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_sequence_node(cdk::sequence_node *const node, int lvl) {
@@ -216,8 +274,8 @@ void til::type_checker::do_evaluation_node(til::evaluation_node *const node, int
   } else if (node->argument()->is_typed(cdk::TYPE_POINTER)) {
     auto ref = cdk::reference_type::cast(node->argument()->type());
 
-    // default to int pointer if unspec pointer
     if (ref != nullptr && ref->referenced()->name() == cdk::TYPE_UNSPEC) {
+    // (double !p (objects 5)) this is where update the referenced type to double
       node->argument()->type(cdk::reference_type::create(4, cdk::primitive_type::create(4, cdk::TYPE_INT)));
     }
   }
@@ -256,6 +314,11 @@ void til::type_checker::do_read_node(til::read_node *const node, int lvl) {
 void til::type_checker::do_address_of_node(til::address_of_node *const node, int lvl) {
   ASSERT_UNSPEC
   node->lvalue()->accept(this, lvl + 2);
+  if (node->lvalue()->is_typed(cdk::TYPE_POINTER)) {
+    auto ref = cdk::reference_type::cast(node->lvalue()->type()); // cast for pointer information
+    if (ref->referenced()->name() == cdk::TYPE_VOID) // if lval is void pointer aka generic pointer
+      node->type(node->lvalue()->type()); // it's address is also a void pointer (!void == !!void == ...) 
+  }
   node->type(cdk::reference_type::create(4, node->lvalue()->type()));
 }
 
@@ -270,7 +333,6 @@ void til::type_checker::do_stack_alloc_node(til::stack_alloc_node *const node, i
     throw std::string("expected integer type in stack allocation operator argument");
   }
 
-  // pointer to unspec type, primitive type depends on context
   node->type(cdk::reference_type::create(4, cdk::primitive_type::create(0, cdk::TYPE_UNSPEC)));
 }
 
@@ -346,33 +408,59 @@ void til::type_checker::do_function_call_node(til::function_call_node *const nod
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_declaration_node(til::declaration_node *const node, int lvl) {
-  // if we have initializer expression
-  if (node->initializer() != nullptr) {
+  if (node->type() == nullptr) { // var 
     node->initializer()->accept(this, lvl + 2);
-
-    // static typed declaration
-    if (node->type() != nullptr) {
-      if (node->initializer()->is_typed(cdk::TYPE_UNSPEC)) {
-        node->initializer()->type(node->type());
-      } else if (!node->initializer()->is_typed(node->type()->name())) {
-        throw std::string("wrong type in initializer for variable '" + node->identifier() + "'");
-      }
-    } else { // var 
-      node->type(node->initializer()->type());
-    }
-
-    // cant be void type declaration
-    if (node->is_typed(cdk::TYPE_VOID)) {
+    if (node->initializer()->is_typed(cdk::TYPE_VOID)) {
       throw std::string("cannot declare variable of type void");
+    } else if (node->initializer()->is_typed(cdk::TYPE_UNSPEC)) { // (var x (read))
+      node->initializer()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+    } else if (node->initializer()->is_typed(cdk::TYPE_POINTER)) {
+      auto ref = cdk::reference_type::cast(node->initializer()->type());
+      if (ref->referenced()->name() == cdk::TYPE_UNSPEC) { // (var x (objects 5))
+        node->initializer()->type(cdk::reference_type::create(4,
+            cdk::primitive_type::create(4, cdk::TYPE_INT)));
+      }
+    }
+    node->type(node->initializer()->type());
+  } else { // static type
+    if (node->initializer() != nullptr) {
+      node->initializer()->accept(this, lvl + 2);
+
+      if (node->initializer()->is_typed(cdk::TYPE_UNSPEC)) { // (read)
+        if (node->is_typed(cdk::TYPE_DOUBLE)) {
+          node->initializer()->type(cdk::primitive_type::create(8, cdk::TYPE_DOUBLE));
+        } else if (node->is_typed(cdk::TYPE_INT)) {
+          node->initializer()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+        } else {
+          throw std::string("conflicting initializer expression type for variable'" + node->identifier() + "'");
+        } 
+      } else if (node->initializer()->is_typed(cdk::TYPE_POINTER) && node->is_typed(cdk::TYPE_POINTER)) {
+        auto initref = cdk::reference_type::cast(node->initializer()->type());
+        if (initref->referenced()->name() == cdk::TYPE_UNSPEC || initref->referenced()->name() == cdk::TYPE_VOID) {
+          // int! p (objects 5) -> type cast expression (objects 5) to appropriate pointer type
+          // int! p (void!) -> implicit typecast à lá C (int *p = malloc(...))
+          node->initializer()->type(node->type());
+        }
+      }
+
+      if (!deep_compare_types(node->type(), node->initializer()->type())) {
+        throw std::string("'conflicting initializer expression type for variable'" + node->identifier() + "'");
+      }
     }
   }
 
-  auto symbol = til::make_symbol(node->identifier(), node->type(), node->qualifier());
-
-  if (_symtab.insert(symbol->name(), symbol)) {
-    _parent->set_new_symbol(symbol);
+  auto new_symbol = til::make_symbol(node->identifier(), node->type(), node->qualifier());
+  if (!_symtab.insert(new_symbol->name(), new_symbol)) {
+    // Redeclaration of variabl
+    const auto previous_symbol = _symtab.find(node->identifier());
+    if (deep_compare_types(previous_symbol->type(), new_symbol->type(), false)) {
+      throw std::string("redeclaration of variable '" + node->identifier() + "' with conflicting type");
+    }
+    _symtab.replace(new_symbol->name(), new_symbol);
+    _parent->set_new_symbol(new_symbol);
     return;
   }
+  _parent->set_new_symbol(new_symbol);
 }
 
 //---------------------------------------------------------------------------
