@@ -553,7 +553,7 @@ void til::type_checker::do_declaration_node(til::declaration_node *const node,
             initref->referenced()->name() == cdk::TYPE_VOID) {
           // int! p (objects 5) -> type cast expression (objects 5) to
           // appropriate pointer type int! p (void!) -> implicit typecast à lá C
-          // (int *p = malloc(...))
+          // (int *p = m*lloc(...)), cant use func name...
           node->initializer()->type(node->type());
         }
       }
