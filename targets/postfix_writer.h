@@ -5,6 +5,7 @@
 
 #include <sstream>
 #include <stack>
+#include <unordered_set>
 #include <cdk/emitters/basic_postfix_emitter.h>
 
 namespace til {
@@ -24,6 +25,9 @@ namespace til {
     std::vector<int> _loop_start_lbls;
     std::vector<int> _loop_end_lbls;
 
+    std::unordered_set<std::string> _external_funcs; // external funcs to be imported
+
+    bool _func_args_decl = true;
     int _offset = 0; // current frame pointer offset
 
     int _lbl;

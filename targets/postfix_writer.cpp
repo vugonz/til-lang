@@ -232,7 +232,6 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
 
   frame_size_calculator fsc(_compiler, _symtab);
   node->accept(&fsc, lvl);
-  std::cout << fsc.localsize() << std::endl;
   _pf.ENTER(fsc.localsize());
 
   auto retLabel = mklbl(++_lbl);
@@ -249,17 +248,58 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
   _pf.LEAVE();
   _pf.RET();
 
-  // these are just a few library function imports
-  _pf.EXTERN("readi");
-  _pf.EXTERN("printi");
-  _pf.EXTERN("prints");
-  _pf.EXTERN("println");
+  // declare the extern functions 
+  for (const auto &ext_func : _external_funcs) {
+    std::cerr << ext_func << std::endl;
+    _pf.EXTERN(ext_func);
+  }
 }
 
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_function_node(til::function_node *const node, int lvl) {
-  // TODO
+  auto func_lbl = mklbl(++_lbl);
+  _function_lbls.push(func_lbl);
+
+  /** Argument handling */
+  const int prev_offset = _offset;
+  _offset = 8; // argument variables
+
+  _func_args_decl = true;
+  if (node->arguments()) 
+    node->arguments()->accept(this, lvl + 2);
+  _func_args_decl = false;
+
+  _pf.TEXT();
+  _pf.ALIGN();
+  _pf.LABEL(func_lbl);
+
+  auto ret_lbl = mklbl(++_lbl);
+  /** Local variables handling */
+  frame_size_calculator fsc(_compiler, _symtab);
+  node->block()->accept(&fsc, lvl);
+  _pf.ENTER(fsc.localsize());
+
+  _offset = 0; // local variables
+  node->block()->accept(this, lvl + 2);
+  _offset = prev_offset; // reset offset
+
+  /** Return handling */
+  _pf.ALIGN();
+  _pf.LABEL(ret_lbl);
+  _pf.LEAVE();
+  _pf.RET();
+
+  /** Save expression value */
+  if (in_function()) { // inner declaration, it need to be put on the stack
+    _pf.TEXT(_function_lbls.top());
+    _pf.ADDR(func_lbl);
+  } else { // global declaration
+    _pf.DATA();
+    _pf.ADDR(func_lbl);
+  }
+
+  _function_lbls.pop();
 }
 
 void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {
@@ -289,18 +329,22 @@ void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
 
     expr_node->accept(this, lvl); // determine the value to print
     if (expr_node->is_typed(cdk::TYPE_INT)) {
+      _external_funcs.insert("printi");
       _pf.CALL("printi");
       _pf.TRASH(4); // delete the printed value
     } else if (expr_node->is_typed(cdk::TYPE_STRING)) {
+      _external_funcs.insert("prints");
       _pf.CALL("prints");
       _pf.TRASH(4); // delete the printed value's address
     } else if (expr_node->is_typed(cdk::TYPE_DOUBLE)) {
-      _pf.CALL("prints");
-      _pf.TRASH(4); // delete the printed value's address
+      _external_funcs.insert("printd");
+      _pf.CALL("printd");
+      _pf.TRASH(8); // delete the printed value's address
     }  
   }
 
   if (node->newline()) {
+    _external_funcs.insert("println");
     _pf.CALL("println"); // print a newline
   }
 }
@@ -310,9 +354,11 @@ void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
 void til::postfix_writer::do_read_node(til::read_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   if (node->is_typed(cdk::TYPE_INT)) {
+    _external_funcs.insert("readi");
     _pf.CALL("readi");
     _pf.LDFVAL32();
   } else if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _external_funcs.insert("readd");
     _pf.CALL("readd");
     _pf.LDFVAL64();
   } else {
@@ -411,7 +457,8 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_function_call_node(til::function_call_node *const node, int lvl) {
-  // TODO
+  ASSERT_SAFE_EXPRESSIONS
+
 }
 
 //---------------------------------------------------------------------------
@@ -420,8 +467,12 @@ void til::postfix_writer::do_declaration_node(til::declaration_node *const node,
   
   int typesize = node->type()->size();
   int offset = 0;
-  if (in_function()) {
-    _offset -= typesize;
+
+  if (_func_args_decl) {
+    offset = _offset;      // func args start 8 and go up (_offset is 8 if here)
+    _offset += typesize;
+  } else if (in_function()) {
+    _offset -= typesize;   // local variables start at 0 and go down 
     offset = _offset;
   }
 
