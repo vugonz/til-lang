@@ -5,6 +5,8 @@
 #include "targets/frame_size_calculator.h"
 #include ".auto/all_nodes.h"  // all_nodes.h is automatically generated
 
+#include "til_parser.tab.h"
+
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_nil_node(cdk::nil_node * const node, int lvl) {
@@ -229,22 +231,23 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
   _pf.LABEL("_main");
 
   _function_lbls.push("_main");
+  // treated as just line any other function
+  auto prog_symbol = til::make_symbol("@", cdk::functional_type::create(cdk::primitive_type::create(4, cdk::TYPE_INT)), tPRIVATE);
+  _symtab.insert("@", prog_symbol);
 
   frame_size_calculator fsc(_compiler, _symtab);
   node->accept(&fsc, lvl);
   _pf.ENTER(fsc.localsize());
 
-  auto retLabel = mklbl(++_lbl);
+  auto ret_lbl = mklbl(++_lbl);
+  _current_function_ret_lbl = ret_lbl;
 
   _offset = 0;
   node->block()->accept(this, lvl + 2);
 
   // end the main function
-  _pf.INT(0);
-  _pf.STFVAL32();
-
   _pf.ALIGN();
-  _pf.LABEL(retLabel);
+  _pf.LABEL(ret_lbl);
   _pf.LEAVE();
   _pf.RET();
 
@@ -261,6 +264,14 @@ void til::postfix_writer::do_function_node(til::function_node *const node, int l
   auto func_lbl = mklbl(++_lbl);
   _function_lbls.push(func_lbl);
 
+  // create function symbol in this context
+  auto function_sym = til::make_symbol("@", node->type(), tPRIVATE);
+  if (!_symtab.insert(function_sym->name(), function_sym)) {
+    _symtab.replace(function_sym->name(), function_sym);
+  }
+  
+  _functions.push(function_sym);
+
   /** Argument handling */
   const int prev_offset = _offset;
   _offset = 8; // argument variables
@@ -275,6 +286,7 @@ void til::postfix_writer::do_function_node(til::function_node *const node, int l
   _pf.LABEL(func_lbl);
 
   auto ret_lbl = mklbl(++_lbl);
+  _current_function_ret_lbl = ret_lbl;
   /** Local variables handling */
   frame_size_calculator fsc(_compiler, _symtab);
   node->block()->accept(&fsc, lvl);
@@ -290,20 +302,26 @@ void til::postfix_writer::do_function_node(til::function_node *const node, int l
   _pf.LEAVE();
   _pf.RET();
 
-  /** Save expression value */
-  if (in_function()) { // inner declaration, it need to be put on the stack
-    _pf.TEXT(_function_lbls.top());
-    _pf.ADDR(func_lbl);
-  } else { // global declaration
-    _pf.DATA();
-    _pf.ADDR(func_lbl);
-  }
-
   _function_lbls.pop();
+  _functions.pop();
+  _current_function_ret_lbl = nullptr;
 }
 
 void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {
-  // TODO
+  ASSERT_SAFE_EXPRESSIONS
+  auto symbol = _symtab.find("@"); // type checker ensures it exists 
+
+  if (!symbol->is_typed(cdk::TYPE_VOID)) {
+    node->ret_val()->accept(this, lvl + 2);
+    if (!symbol->is_typed(cdk::TYPE_DOUBLE)) {
+      _pf.STFVAL32();
+    } else {
+      _pf.I2D();
+      _pf.STFVAL64();
+    }
+  }
+
+  _pf.JMP(_current_function_ret_lbl);
 }
 
 //---------------------------------------------------------------------------
@@ -480,7 +498,7 @@ void til::postfix_writer::do_function_call_node(til::function_call_node *const n
 
   if (node->func()) {
     node->func()->accept(this, lvl); // call func expr
-    _pf.BRANCH();
+    _pf.BRANCH(); // because functions are just variables with addresses
   }
 
   if (args_size > 0) {

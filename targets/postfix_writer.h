@@ -20,12 +20,15 @@ namespace til {
     std::stack<std::string> _function_lbls;
 
     std::string _current_func_lbl;
-    std::string _current_body_ret_lbl;
+    std::string _current_function_ret_lbl;  // current function return label
 
     std::vector<int> _loop_start_lbls;
     std::vector<int> _loop_end_lbls;
 
     std::unordered_set<std::string> _external_funcs; // external funcs to be imported
+
+    std::stack<std::shared_ptr<til::symbol>> _functions; // functions
+
 
     bool _func_args_decl = true;
     int _offset = 0; // current frame pointer offset

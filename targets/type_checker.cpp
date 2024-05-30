@@ -281,7 +281,28 @@ void til::type_checker::do_function_node(til::function_node *const node,
 }
 
 void til::type_checker::do_return_node(til::return_node *const node, int lvl) {
-  // TODO
+  auto symbol = _symtab.find("@");
+  if (symbol == nullptr) {
+    throw std::string("return statement outside function definition");
+  }
+
+  std::shared_ptr<cdk::functional_type> func_type = cdk::functional_type::cast(symbol->type());
+
+  if (node->ret_val() == nullptr) {
+    if (func_type->output(0)->name() == cdk::TYPE_VOID) {
+      throw std::string("return value missing in non-void function");
+    }
+    return;
+  }
+
+  if (func_type->output(0)->name() == cdk::TYPE_VOID) {
+    throw std::string("non void return value in void function");
+  }
+
+  node->ret_val()->accept(this, lvl + 2);
+
+  if (!deep_compare_types(node->ret_val()->type(), func_type->output(0), true))
+    throw std::string("incompatible return value for funciton");
 }
 
 //---------------------------------------------------------------------------
