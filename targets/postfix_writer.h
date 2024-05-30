@@ -30,7 +30,7 @@ namespace til {
     std::stack<std::shared_ptr<til::symbol>> _functions; // functions
 
 
-    bool _func_args_decl = true;
+    bool _func_args_decl = false;
     int _offset = 0; // current frame pointer offset
 
     int _lbl;
@@ -49,6 +49,11 @@ namespace til {
     inline bool in_function() {
       return _function_lbls.size() > 0;
     }
+
+  protected:
+    void pre_process_logical_binary_expr(cdk::binary_operation_node *const node, int lvl);
+    void pre_process_int_double_pointer_binary_expr(cdk::binary_operation_node *const node, int lvl);
+    void pre_process_int_double_binary_expr(cdk::binary_operation_node *const node, int lvl);
 
   private:
     /** Method used to generate sequential labels. */

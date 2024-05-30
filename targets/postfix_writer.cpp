@@ -18,10 +18,28 @@ void til::postfix_writer::do_data_node(cdk::data_node * const node, int lvl) {
 
 void til::postfix_writer::do_not_node(cdk::not_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS
-  node->argument()->accept(this, lvl);
+  node->argument()->accept(this, lvl + 2);
   _pf.INT(0);
   _pf.EQ();
 }
+
+void til::postfix_writer::do_unary_minus_node(cdk::unary_minus_node* const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS
+  node->argument()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_INT)) {
+    _pf.NEG();
+  } else {
+    _pf.DNEG();
+  }
+}
+
+void til::postfix_writer::do_unary_plus_node(cdk::unary_plus_node* const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS
+  node->argument()->accept(this, lvl + 2);
+}
+
+//---------------------------------------------------------------------------
+
 void til::postfix_writer::do_and_node(cdk::and_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS
   auto lbl = mklbl(++_lbl);
@@ -93,83 +111,154 @@ void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl)
 
 //---------------------------------------------------------------------------
 
-void til::postfix_writer::do_unary_minus_node(cdk::unary_minus_node * const node, int lvl) {
+void til::postfix_writer::pre_process_int_double_pointer_binary_expr(
+    cdk::binary_operation_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->argument()->accept(this, lvl); // determine the value
-  _pf.NEG(); // 2-complement
+  node->left()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) &&
+      !node->left()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
+  else if (node->is_typed(cdk::TYPE_POINTER) &&
+           !node->left()->is_typed(cdk::TYPE_POINTER)) {
+    const auto ref_right =
+        cdk::reference_type::cast(node->right()->type())->referenced();
+    _pf.INT(std::max(
+        1, static_cast<int>(ref_right->size())));
+    _pf.MUL();
+  }
+
+  node->right()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) &&
+      !node->right()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
+  else if (node->is_typed(cdk::TYPE_POINTER) &&
+           !node->right()->is_typed(cdk::TYPE_POINTER)) {
+    const auto ref_left =
+        cdk::reference_type::cast(node->left()->type())->referenced();
+    _pf.INT(std::max(
+        1, static_cast<int>(ref_left->size())));
+    _pf.MUL();
+  }
+}
+void til::postfix_writer::do_add_node(cdk::add_node *const node, int lvl) {
+  pre_process_int_double_pointer_binary_expr(node, lvl);
+
+  if (!node->is_typed(cdk::TYPE_DOUBLE))
+    _pf.ADD();
+  else
+    _pf.DADD();
 }
 
-void til::postfix_writer::do_unary_plus_node(cdk::unary_plus_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->argument()->accept(this, lvl); // determine the value
+void til::postfix_writer::do_sub_node(cdk::sub_node *const node, int lvl) {
+  pre_process_int_double_pointer_binary_expr(node, lvl);
+
+  if (!node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.SUB();
+    // pointer - pointer requires a special treatment
+    if ((node->left()->is_typed(cdk::TYPE_POINTER) &&
+         node->right()->is_typed(cdk::TYPE_POINTER)) &&
+        cdk::reference_type::cast(node->left()->type())->referenced()->name() !=
+            cdk::TYPE_VOID) {
+      _pf.INT(cdk::reference_type::cast(node->left()->type())
+                  ->referenced()
+                  ->size());
+      _pf.DIV();
+    }
+  } else {
+    _pf.DSUB();
+  }
 }
 
 //---------------------------------------------------------------------------
 
-void til::postfix_writer::do_add_node(cdk::add_node * const node, int lvl) {
+void til::postfix_writer::pre_process_int_double_binary_expr(
+    cdk::binary_operation_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.ADD();
+  node->left()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) &&
+      !node->left()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
+
+  node->right()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) &&
+      !node->right()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
 }
-void til::postfix_writer::do_sub_node(cdk::sub_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.SUB();
+
+void til::postfix_writer::do_mul_node(cdk::mul_node *const node, int lvl) {
+  pre_process_int_double_binary_expr(node, lvl);
+
+  if (!node->is_typed(cdk::TYPE_DOUBLE))
+    _pf.MUL();
+  else
+    _pf.DMUL();
 }
-void til::postfix_writer::do_mul_node(cdk::mul_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.MUL();
+
+void til::postfix_writer::do_div_node(cdk::div_node *const node, int lvl) {
+  pre_process_int_double_binary_expr(node, lvl);
+
+  if (!node->is_typed(cdk::TYPE_DOUBLE))
+    _pf.DIV();
+  else
+    _pf.DDIV();
 }
-void til::postfix_writer::do_div_node(cdk::div_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.DIV();
-}
-void til::postfix_writer::do_mod_node(cdk::mod_node * const node, int lvl) {
+
+void til::postfix_writer::do_mod_node(cdk::mod_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   node->left()->accept(this, lvl);
   node->right()->accept(this, lvl);
   _pf.MOD();
 }
-void til::postfix_writer::do_lt_node(cdk::lt_node * const node, int lvl) {
+
+//---------------------------------------------------------------------------
+
+void til::postfix_writer::pre_process_logical_binary_expr(
+    cdk::binary_operation_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+  node->left()->accept(this, lvl + 2);
+  if (!node->left()->is_typed(cdk::TYPE_DOUBLE) &&
+      node->right()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
+
+  node->right()->accept(this, lvl + 2);
+  if (!node->right()->is_typed(cdk::TYPE_DOUBLE) &&
+      node->left()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
+
+  if (node->left()->is_typed(cdk::TYPE_DOUBLE) ||
+      node->right()->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.DCMP();
+    _pf.INT(0);
+  }
+}
+
+void til::postfix_writer::do_lt_node(cdk::lt_node *const node, int lvl) {
+  pre_process_logical_binary_expr(node, lvl);
   _pf.LT();
 }
-void til::postfix_writer::do_le_node(cdk::le_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+
+void til::postfix_writer::do_le_node(cdk::le_node *const node, int lvl) {
+  pre_process_logical_binary_expr(node, lvl);
   _pf.LE();
 }
-void til::postfix_writer::do_ge_node(cdk::ge_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+
+void til::postfix_writer::do_ge_node(cdk::ge_node *const node, int lvl) {
+  pre_process_logical_binary_expr(node, lvl);
   _pf.GE();
 }
-void til::postfix_writer::do_gt_node(cdk::gt_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+
+void til::postfix_writer::do_gt_node(cdk::gt_node *const node, int lvl) {
+  pre_process_logical_binary_expr(node, lvl);
   _pf.GT();
 }
-void til::postfix_writer::do_ne_node(cdk::ne_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+
+void til::postfix_writer::do_ne_node(cdk::ne_node *const node, int lvl) {
+  pre_process_logical_binary_expr(node, lvl);
   _pf.NE();
 }
-void til::postfix_writer::do_eq_node(cdk::eq_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+
+void til::postfix_writer::do_eq_node(cdk::eq_node *const node, int lvl) {
+  pre_process_logical_binary_expr(node, lvl);
   _pf.EQ();
 }
 
