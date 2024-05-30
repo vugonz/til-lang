@@ -458,7 +458,40 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
 
 void til::postfix_writer::do_function_call_node(til::function_call_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS
+  auto func_type = node->func()->type();
+  std::vector<std::shared_ptr<cdk::basic_type>> arg_types;
+  if (node->func()) { // normal function call
+    arg_types = 
+        cdk::functional_type::cast(func_type)->input()->components();
+  }
 
+  size_t args_size = 0;
+  for (int i = node->arguments()->size() - 1; i >= 0; --i) {
+    auto arg = dynamic_cast<cdk::expression_node *>(node->arguments()->node(i));
+    args_size += arg->type()->size();
+    // accept covariant arguments
+    arg->accept(this, lvl + 2);
+    if (arg_types[i]->name() == cdk::TYPE_DOUBLE &&
+            arg->type()->name() == cdk::TYPE_INT) {
+        args_size += 4;
+        _pf.I2D();
+      }
+  }
+
+  if (node->func()) {
+    node->func()->accept(this, lvl); // call func expr
+    _pf.BRANCH();
+  }
+
+  if (args_size > 0) {
+    _pf.TRASH(args_size);
+  }
+
+  if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.LDFVAL64();
+  } else if (!node->is_typed(cdk::TYPE_VOID)) {
+    _pf.LDFVAL32();
+  }
 }
 
 //---------------------------------------------------------------------------
