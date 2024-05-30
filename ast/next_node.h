@@ -9,14 +9,14 @@ namespace til {
  * Class for describing stop nodes.
  */
 class next_node : public cdk::basic_node {
-    int _iteration_no;
+    int _level;
 
   public:
-    next_node(int lineno, int iteration_no)
-        : cdk::basic_node(lineno), _iteration_no(iteration_no) {}
+    next_node(int lineno, int level = 1)
+        : cdk::basic_node(lineno), _level(level) {}
 
   public:
-    inline int iteration_no() const { return _iteration_no; }
+    inline int level() const { return _level; }
 
     void accept(basic_ast_visitor *sp, int level) {
         sp->do_next_node(this, level);

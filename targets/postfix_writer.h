@@ -16,10 +16,13 @@ namespace til {
     cdk::symbol_table<til::symbol> &_symtab;
     cdk::basic_postfix_emitter &_pf;
 
-    std::stack<std::string> _functionLabels;
+    std::stack<std::string> _function_lbls;
 
-    std::string _currentFuncLabel;
-    std::string _currentBodyRetLabel;
+    std::string _current_func_lbl;
+    std::string _current_body_ret_lbl;
+
+    std::vector<int> _loop_start_lbls;
+    std::vector<int> _loop_end_lbls;
 
     int _offset = 0; // current frame pointer offset
 
@@ -37,7 +40,7 @@ namespace til {
     }
 
     inline bool in_function() {
-      return _functionLabels.size() > 0;
+      return _function_lbls.size() > 0;
     }
 
   private:
@@ -63,3 +66,11 @@ namespace til {
 } // til
 
 #endif
+
+#define THROW_ERROR(node, ...) \
+  do { \
+    std::cerr << "error: " << node->lineno() << ": "; \
+    std::cerr << __VA_ARGS__; \
+    std::cerr << std::endl; \
+    return; \
+  } while(0);

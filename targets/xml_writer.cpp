@@ -265,13 +265,13 @@ void til::xml_writer::do_loop_node(til::loop_node * const node, int lvl) {
 
 void til::xml_writer::do_stop_node(til::stop_node *const node, int lvl) {
   //ASSERT_SAFE_EXPRESSIONS;
-  os() << std::string(lvl, ' ') << "<" << node->label() << " iteration_no='" << node->iteration_no() << "'>" << std::endl;
+  os() << std::string(lvl, ' ') << "<" << node->label() << " level='" << node->level() << "'>" << std::endl;
   closeTag(node, lvl);
 }
 
 void til::xml_writer::do_next_node(til::next_node *const node, int lvl) {
   //ASSERT_SAFE_EXPRESSIONS;
-  os() << std::string(lvl, ' ') << "<" << node->label() << " iteration_no='" << node->iteration_no() << "'>" << std::endl;
+  os() << std::string(lvl, ' ') << "<" << node->label() << " level='" << node->level() << "'>" << std::endl;
   closeTag(node, lvl);
 }
 

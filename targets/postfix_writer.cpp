@@ -15,13 +15,33 @@ void til::postfix_writer::do_data_node(cdk::data_node * const node, int lvl) {
 }
 
 void til::postfix_writer::do_not_node(cdk::not_node * const node, int lvl) {
-  // EMPTY
+  ASSERT_SAFE_EXPRESSIONS
+  node->argument()->accept(this, lvl);
+  _pf.INT(0);
+  _pf.EQ();
 }
 void til::postfix_writer::do_and_node(cdk::and_node * const node, int lvl) {
-  // EMPTY
+  ASSERT_SAFE_EXPRESSIONS
+  auto lbl = mklbl(++_lbl);
+  node->left()->accept(this, lvl + 2);
+  _pf.DUP32();
+  _pf.JZ(lbl);
+  node->right()->accept(this, lvl + 2);
+  _pf.AND();
+  _pf.ALIGN();
+  _pf.LABEL(lbl);
 }
+
 void til::postfix_writer::do_or_node(cdk::or_node * const node, int lvl) {
-  // EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+  auto lbl = mklbl(++_lbl);
+  node->left()->accept(this, lvl + 2);
+  _pf.DUP32();
+  _pf.JNZ(lbl);
+  node->right()->accept(this, lvl + 2);
+  _pf.OR();
+  _pf.ALIGN();
+  _pf.LABEL(lbl);
 }
 
 //---------------------------------------------------------------------------
@@ -64,7 +84,7 @@ void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl)
     _pf.SADDR(mklbl(lbl));
   } else {
     /* put the address in the stack */
-    _pf.TEXT(_functionLabels.top());
+    _pf.TEXT(_function_lbls.top());
     _pf.ADDR(mklbl(lbl));
   }
 }
@@ -208,7 +228,7 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
   _pf.GLOBAL("_main", _pf.FUNC());
   _pf.LABEL("_main");
 
-  _functionLabels.push("_main");
+  _function_lbls.push("_main");
 
   frame_size_calculator fsc(_compiler, _symtab);
   node->accept(&fsc, lvl);
@@ -277,10 +297,7 @@ void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
     } else if (expr_node->is_typed(cdk::TYPE_DOUBLE)) {
       _pf.CALL("prints");
       _pf.TRASH(4); // delete the printed value's address
-    } else {
-      std::cerr << "ERROR: CANNOT HAPPEN!" << std::endl;
-      exit(1);
-    }
+    }  
   }
 
   if (node->newline()) {
@@ -299,7 +316,7 @@ void til::postfix_writer::do_read_node(til::read_node * const node, int lvl) {
     _pf.CALL("readd");
     _pf.LDFVAL64();
   } else {
-    std::cerr << "FATAL: " << node->lineno() << ": cannot read type" << std::endl;
+    THROW_ERROR(node, "cannot read type");
     return;
   }
 }
@@ -322,21 +339,47 @@ void til::postfix_writer::do_nullptr_node(til::nullptr_node *const node, int lvl
 
 void til::postfix_writer::do_loop_node(til::loop_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  int lbl1, lbl2;
-  _pf.LABEL(mklbl(lbl1 = ++_lbl));
+  int loop_start_lbl = ++_lbl;
+  int loop_end_lbl = ++_lbl;
+
+  _loop_start_lbls.push_back(loop_start_lbl);
+  _loop_end_lbls.push_back(loop_end_lbl);
+  _symtab.push();
+
+  _pf.LABEL(mklbl(loop_start_lbl));
   node->condition()->accept(this, lvl);
-  _pf.JZ(mklbl(lbl2 = ++_lbl));
+  _pf.JZ(mklbl(loop_end_lbl));
   node->instruction()->accept(this, lvl + 2);
-  _pf.JMP(mklbl(lbl1));
-  _pf.LABEL(mklbl(lbl2));
+  _pf.JMP(mklbl(loop_start_lbl));
+  _pf.LABEL(mklbl(loop_end_lbl));
+
+  _symtab.pop();
+  _loop_start_lbls.pop_back();
+  _loop_end_lbls.pop_back();
 }
 
 void til::postfix_writer::do_stop_node(til::stop_node *const node, int lvl) {
-  // TODO
+  auto loop_lbls_count = _loop_start_lbls.size();
+
+  if (loop_lbls_count == 0)
+    THROW_ERROR(node, "stop instruction oustide loop");
+  
+  if ((size_t) node->level() > loop_lbls_count)
+    THROW_ERROR(node, "invalid stop level ", std::to_string(node->level()));
+ 
+  _pf.JMP(mklbl(_loop_end_lbls[loop_lbls_count - node->level()]));
 }
 
 void til::postfix_writer::do_next_node(til::next_node *const node, int lvl) {
-  // TODO
+  auto loop_lbls_count = _loop_start_lbls.size();
+
+  if (loop_lbls_count == 0)
+    THROW_ERROR(node, "next instruction oustide loop");
+
+  if ((size_t) node->level() > loop_lbls_count)
+    THROW_ERROR(node, "invalid next level ", std::to_string(node->level()));
+
+  _pf.JMP(mklbl(_loop_start_lbls[loop_lbls_count - node->level()]));
 }
 
 //---------------------------------------------------------------------------
@@ -401,9 +444,8 @@ void til::postfix_writer::do_declaration_node(til::declaration_node *const node,
       _pf.LOCAL(symbol->offset());
       _pf.STDOUBLE();
     } else {
-      std::cerr << node->lineno() << ": failed initializing" << std::endl;
+      THROW_ERROR(node, "failed initialization");
     }
-
     return;
   }
 
