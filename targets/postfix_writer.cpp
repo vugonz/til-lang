@@ -347,6 +347,7 @@ void til::postfix_writer::do_loop_node(til::loop_node * const node, int lvl) {
   _symtab.push();
 
   _pf.LABEL(mklbl(loop_start_lbl));
+
   node->condition()->accept(this, lvl);
   _pf.JZ(mklbl(loop_end_lbl));
   node->instruction()->accept(this, lvl + 2);
@@ -366,7 +367,7 @@ void til::postfix_writer::do_stop_node(til::stop_node *const node, int lvl) {
   
   if ((size_t) node->level() > loop_lbls_count)
     THROW_ERROR(node, "invalid stop level ", std::to_string(node->level()));
- 
+
   _pf.JMP(mklbl(_loop_end_lbls[loop_lbls_count - node->level()]));
 }
 
