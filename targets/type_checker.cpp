@@ -283,7 +283,21 @@ void til::type_checker::do_function_node(til::function_node *const node,
 void til::type_checker::do_return_node(til::return_node *const node, int lvl) {
   auto symbol = _symtab.find("@");
   if (symbol == nullptr) {
-    throw std::string("return statement outside function definition");
+    // probably inside program func
+    auto prog_symbol = _symtab.find("_main");
+
+    if (prog_symbol == nullptr)
+      throw std::string("return statement outside function definition");
+
+    if (!node->ret_val())
+      throw std::string("wrong type of return value in main (int expected)");
+    
+    node->ret_val()->accept(this, lvl + 2);
+
+    if (!node->ret_val()->is_typed(cdk::TYPE_INT))
+      throw std::string("wrong type of return value in main (int expected)");
+
+    return;
   }
 
   std::shared_ptr<cdk::functional_type> func_type = cdk::functional_type::cast(symbol->type());

@@ -412,6 +412,9 @@ void til::postfix_writer::do_function_node(til::function_node *const node, int l
 void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS
   auto symbol = _symtab.find("@"); // type checker ensures it exists 
+  if (symbol == nullptr) {
+    symbol = _symtab.find("_main");
+  }
 
   if (!symbol->is_typed(cdk::TYPE_VOID)) {
     node->ret_val()->accept(this, lvl + 2);
