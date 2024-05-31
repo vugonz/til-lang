@@ -307,7 +307,13 @@ void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, 
 }
 
 void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {
-  // TODO
+  ASSERT_SAFE_EXPRESSIONS
+
+  node->base()->accept(this, lvl + 2);
+  node->index()->accept(this, lvl + 2);
+  _pf.INT(node->type()->size());
+  _pf.MUL();
+  _pf.ADD();
 }
 
 //---------------------------------------------------------------------------
