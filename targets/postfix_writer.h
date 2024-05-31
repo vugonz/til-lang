@@ -31,7 +31,7 @@ namespace til {
 
 
     bool _func_args_decl = false;
-    int _offset = 0; // current frame pointer offset
+    int _offset = 0; // current frame pointer offset (0 -> global)
 
     int _lbl;
 

@@ -570,7 +570,7 @@ void til::type_checker::do_declaration_node(til::declaration_node *const node,
   auto new_symbol =
       til::make_symbol(node->identifier(), node->type(), node->qualifier());
   if (!_symtab.insert(new_symbol->name(), new_symbol)) {
-    // Redeclaration of variabl
+    // Redeclaration of variable
     const auto previous_symbol = _symtab.find(node->identifier());
     if (deep_compare_types(previous_symbol->type(), new_symbol->type(),
                            false)) {
@@ -595,4 +595,4 @@ void til::type_checker::do_sizeof_node(til::sizeof_node *const node, int lvl) {
   }
 
   node->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
-}
+  }
